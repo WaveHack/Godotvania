@@ -42,6 +42,8 @@ enum LandingType {
 # -----------------------------------------------------------------------------
 
 const MOVE_SPEED : int = 6 * PIXELS_PER_TILE
+
+const JUMP_STRENGTH : int = -200
 const NUM_JUMPS : int = 2 # Including first grounded jump
 
 #const ACCELERATION_GLITCH_EDGE_THRESHOLD : int = 3 # Corner Boost and Acceleration Glitch
@@ -458,7 +460,7 @@ func action_jump() -> void:
 	if not can_jump:
 		return
 
-	motion.y = -200
+	motion.y = JUMP_STRENGTH
 
 	jumps_remaining -= 1
 	last_jump_peak_y = position.y # reset
