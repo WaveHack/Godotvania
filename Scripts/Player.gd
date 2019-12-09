@@ -41,7 +41,7 @@ enum LandingType {
 # Constants
 # -----------------------------------------------------------------------------
 
-const MOVE_SPEED_IN_TILES_PER_SECOND : int = 6
+const MOVE_SPEED : int = 6 * PIXELS_PER_TILE
 const NUM_JUMPS : int = 2 # Including first grounded jump
 
 #const ACCELERATION_GLITCH_EDGE_THRESHOLD : int = 3 # Corner Boost and Acceleration Glitch
@@ -155,7 +155,7 @@ func handle_input() -> void:
 #
 #					facing = Direction.Left
 
-				motion.x = -MOVE_SPEED_IN_TILES_PER_SECOND * PIXELS_PER_TILE
+				motion.x = -MOVE_SPEED
 
 			elif Input.is_action_pressed("game_move_right"):
 #				if can_turn:
@@ -165,7 +165,7 @@ func handle_input() -> void:
 #
 #					facing = Direction.Right
 
-				motion.x = MOVE_SPEED_IN_TILES_PER_SECOND * PIXELS_PER_TILE
+				motion.x = MOVE_SPEED
 
 			else:
 				motion.x = 0
