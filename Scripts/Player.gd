@@ -60,6 +60,12 @@ const DIAGONAL_DROPKICK_X_VELOCITY : int = 15 * PIXELS_PER_TILE
 const SLIDE_FORCE : int = 240
 const SLIDE_DRAG : int = 8
 
+const STANDING_COLLISION_POSITION := Vector2(0, 2)
+const STANDING_COLLISION_EXTENTS := Vector2(5, 14)
+
+const CROUCHING_COLLISION_POSITION := Vector2(0, 9)
+const CROUCHING_COLLISION_EXTENTS := Vector2(5, 7)
+
 # -----------------------------------------------------------------------------
 # Properties
 # -----------------------------------------------------------------------------
@@ -128,6 +134,7 @@ func _physics_process(delta : float) -> void:
 	update_motion(delta)
 	update_flags()
 	update_animation()
+	update_collision()
 	update_weapon()
 
 	was_crouching_last_frame = is_crouching
@@ -136,49 +143,6 @@ func _physics_process(delta : float) -> void:
 
 
 func handle_input() -> void:
-	# Horizontal movement
-	if is_crouching and not is_sliding:
-		motion.x = 0
-
-#		if Input.is_action_pressed("game_move_left"):
-#			if can_turn:
-#				facing = Direction.Left
-#		elif Input.is_action_pressed("game_move_right"):
-#			if can_turn:
-#				facing = Direction.Right
-
-	elif not is_backdashing and not is_dropkicking and not is_sliding and not is_recovering_from_hard_landing:
-		if can_move:
-			if Input.is_action_pressed("game_move_left"):
-#				if can_turn:
-#					# Turn around while running
-#					if is_running and facing == Direction.Right:
-#						emit_smoke(1, 0, 0, 20)
-#
-#					facing = Direction.Left
-
-				motion.x = -MOVE_SPEED
-
-			elif Input.is_action_pressed("game_move_right"):
-#				if can_turn:
-#					# Turn around while running
-#					if is_running and facing == Direction.Left:
-#						emit_smoke(1, 180, 0, 20)
-#
-#					facing = Direction.Right
-
-				motion.x = MOVE_SPEED
-
-			else:
-				motion.x = 0
-
-				# Stop running
-				if was_running_last_frame:
-					emit_smoke(1, 0 if facing == Direction.Right else 180, 0, 20)
-
-		else:
-			motion.x = 0
-
 	# Movement (Left Analog / D-pad)
 	var horizontal_move = Input.get_action_strength("game_move_right") - Input.get_action_strength("game_move_left")
 
@@ -255,6 +219,8 @@ func handle_input() -> void:
 
 
 func update_motion(delta : float) -> void:
+	# Motion overrides
+
 	# Dropkick
 	if is_dropkicking:
 		motion.y = DROPKICK_Y_VELOCITY
@@ -279,8 +245,8 @@ func update_motion(delta : float) -> void:
 			is_backdashing = false
 
 	# Crouching
-#	elif is_crouching and not is_sliding:
-#		motion.x = 0
+	elif is_crouching and not is_sliding:
+		motion.x = 0
 
 	# Slide
 	elif is_sliding:
@@ -295,6 +261,10 @@ func update_motion(delta : float) -> void:
 	elif is_recovering_from_hard_landing:
 		if motion.x != 0:
 			motion = motion.linear_interpolate(Vector2.ZERO, ($Timers/LandingTimer.wait_time - $Timers/LandingTimer.time_left) / $Timers/LandingTimer.wait_time)
+
+	# Check when to stop moving
+	if can_move and is_moving and (Input.get_action_strength("game_move_right") - Input.get_action_strength("game_move_left")) == 0:
+		motion.x = 0
 
 	# Apply physics and update position
 	motion = move_and_slide(motion, Vector2.UP)
@@ -328,7 +298,8 @@ func update_flags() -> void:
 	is_falling = motion.y > 0
 
 	is_crouching = (Input.is_action_pressed("game_crouch") and can_crouch) \
-			or (is_attacking and was_crouching_last_frame)
+			or (is_attacking and was_crouching_last_frame) \
+			or is_sliding
 
 	is_taunting = Input.is_action_pressed("game_taunt") \
 			and can_taunt
@@ -419,6 +390,15 @@ func update_animation() -> void:
 			$Animator.play("Stand")
 
 
+func update_collision() -> void:
+	if is_crouching:
+		$Collision.position = CROUCHING_COLLISION_POSITION
+		($Collision.shape as RectangleShape2D).extents = CROUCHING_COLLISION_EXTENTS
+	else:
+		$Collision.position = STANDING_COLLISION_POSITION
+		($Collision.shape as RectangleShape2D).extents = STANDING_COLLISION_EXTENTS
+
+
 func update_weapon() -> void:
 	var weapon_area_x_offset : int = 25
 	var weapon_area_y_stand : int = -4
@@ -450,10 +430,12 @@ func action_move(horizontal_move : int) -> void:
 	if not can_move:
 		return
 
+	#motion.x = MOVE_SPEED * horizontal_move
+	# todo: change walk anim speed to match horizontal_move
+
 	var direction : int = sign(horizontal_move)
 
-	# todo: impl
-	pass
+	motion.x = MOVE_SPEED * direction
 
 
 func action_jump() -> void:
